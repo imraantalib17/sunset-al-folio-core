@@ -120,4 +120,22 @@ class ThemeRuntimeGuardTest < Minitest::Test
     refute AlFolioCore.jupyter_plugin_enabled?(disabled_site)
     assert AlFolioCore.command_available?("ruby")
   end
+
+  def test_minifier_output_retries_interrupted_file_writes
+    writer = Class.new do
+      prepend AlFolioCore::JekyllMinifierEintrRetry
+
+      attr_reader :attempts
+
+      def output_file(dest, content)
+        @attempts = (@attempts || 0) + 1
+        raise Errno::EINTR if attempts == 1
+
+        [dest, content]
+      end
+    end.new
+
+    assert_equal ["index.html", "<main></main>"], writer.output_file("index.html", "<main></main>")
+    assert_equal 2, writer.attempts
+  end
 end

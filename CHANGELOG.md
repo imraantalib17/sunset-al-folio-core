@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9 - 2026-05-24
+
+- Retried interrupted `jekyll-minifier` file writes so Jupyter notebook conversion does not fail builds with transient `Errno::EINTR`.
+
 ## 1.0.8 - 2026-05-24
 
 - Fixed book-review inline CSS typos and contained floated cover figures within the article flow.

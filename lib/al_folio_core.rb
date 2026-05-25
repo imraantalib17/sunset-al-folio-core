@@ -132,6 +132,21 @@ module AlFolioCore
     end
   end
 
+  module JekyllMinifierEintrRetry
+    def output_file(dest, content)
+      attempts = 0
+
+      begin
+        super
+      rescue Errno::EINTR
+        attempts += 1
+        retry if attempts < 4
+
+        raise
+      end
+    end
+  end
+
   module_function
 
   def compat_enabled?(site)
@@ -209,6 +224,16 @@ module AlFolioCore
     cache_digester.prepend(JekyllCacheBustThemeFallback)
   end
 
+  def patch_jekyll_minifier_for_notebook_output!
+    return unless defined?(Jekyll::Compressor)
+
+    [Jekyll::Document, Jekyll::Page, Jekyll::StaticFile].each do |klass|
+      next if klass.ancestors.include?(JekyllMinifierEintrRetry)
+
+      klass.prepend(JekyllMinifierEintrRetry)
+    end
+  end
+
   def jupyter_plugin_enabled?(site)
     Array(site.config["plugins"]).map(&:to_s).include?("jekyll-jupyter-notebook")
   end
@@ -247,6 +272,7 @@ end
 
 AlFolioCore.patch_jekyll_terser_for_theme_assets!
 AlFolioCore.patch_jekyll_cache_bust_for_theme_assets!
+AlFolioCore.patch_jekyll_minifier_for_notebook_output!
 Liquid::Template.register_tag("details", AlFolioCore::Tags::DetailsTag)
 Liquid::Template.register_tag("file_exists", AlFolioCore::Tags::FileExistsTag)
 Liquid::Template.register_filter(AlFolioCore::Filters::HideCustomBibtex)
